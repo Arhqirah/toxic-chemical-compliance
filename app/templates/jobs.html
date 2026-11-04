@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Jobs</h2>
+  <p>Open jobs are listed first.{% if session.role == 'warehouse' %} Confirm a job once the barrels have been moved.{% endif %}</p>
+  <table>
+    <tr><th>#</th><th>Type</th><th>Site</th><th>Warehouse</th><th>Class</th><th>Units (K)</th><th>Ticket</th><th>Raised</th><th>Status</th></tr>
+    {% for j in jobs %}
+      <tr class="{{ 'open' if j.status == 'open' }}">
+        <td>{{ j.id }}</td>
+        <td>{{ 'Delivery' if j.type == 'IN' else 'Dispatch' }}</td>
+        <td>{{ j.site }}</td>
+        <td>{{ j.warehouse }}</td>
+        <td>{{ j.chemical_class }}</td>
+        <td>{{ j.units_k }}</td>
+        <td>{{ j.ticket_ref }}</td>
+        <td>{{ j.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          {% if j.status == 'open' and session.role == 'warehouse' %}
+            <form method="post" action="{{ url_for('confirm_job', job_id=j.id) }}">
+              <button type="submit">Confirm</button>
+            </form>
+          {% else %}
+            {{ j.status }}
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}
