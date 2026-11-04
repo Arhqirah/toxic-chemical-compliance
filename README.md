@@ -35,8 +35,9 @@ docker compose up --build
 ```
 app/                 Flask app (Dockerfile, code, templates)
 db/01_schema.sql     Tables and indexes
-db/02_seed.sql       Test data
+db/02_seed.sql       Sites and warehouses
 db/03_app_user.sh    Creates the app's limited database account
+db/04_seed_data.sql  Test data: users, stock, jobs, audit log
 docker-compose.yml   Development environment
 .env.example         Settings template (copy to .env)
 ```
@@ -48,6 +49,35 @@ docker-compose.yml   Development environment
 | root | Everything | Nobody, day to day |
 | `tc_admin` | All rights on `toxic_chemical` | Developers / maintenance |
 | `tc_app` | Only what the app needs; `audit_log` is INSERT + SELECT only | The Flask app |
+
+### Prove the app account can't change history
+
+Run this with the stack up. It tries to delete from the audit log as `tc_app` (use the `DB_APP_PASSWORD` from your `.env`):
+
+```bash
+docker compose exec db mariadb -utc_app -pchange-me-app toxic_chemical -e "DELETE FROM audit_log WHERE id=1"
+```
+
+Expected result:
+
+```
+ERROR 1142 (42000): DELETE command denied to user 'tc_app'@'localhost' for table `toxic_chemical`.`audit_log`
+```
+
+## Test data
+
+| Table | Rows |
+|---|---|
+| site | 4 |
+| warehouse | 20 |
+| users | 20 (7 gate, 8 warehouse, 5 compliance) |
+| stock | 25 |
+| job | 33 (25 deliveries + 5 dispatches confirmed, 3 still open) |
+| audit_log | 63 |
+
+All stock follows the storage rules (capacity, A and B never together, A never in neighbouring warehouses). **Hamburg Depot has 16K units of class A on purpose**, so the fire brigade warning has something to show.
+
+All test users log in with the dev-only password `Password123!`, for example `anna.gate`, `hans.warehouse` or `peter.compliance`. The database only stores scrypt hashes.
 
 ## Branching
 
