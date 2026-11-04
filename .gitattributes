@@ -1,0 +1,4 @@
+# Shell and SQL files run inside Linux containers, so they must keep
+# Unix (LF) line endings even when the repo is cloned on Windows.
+*.sh  text eol=lf
+*.sql text eol=lf

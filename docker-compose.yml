@@ -1,0 +1,62 @@
+# Development environment: 2 containers (Flask app + MariaDB).
+# Start everything with:  docker compose up --build
+# Open the app at:        http://localhost:5000
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    # Values come from the .env file (copy .env.example to .env first)
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      # This user becomes the "admin" account: full rights on our database only
+      MARIADB_USER: ${DB_ADMIN_USER}
+      MARIADB_PASSWORD: ${DB_ADMIN_PASSWORD}
+      # Passed through so db/03_app_user.sh can create the limited app account
+      DB_APP_USER: ${DB_APP_USER}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+    volumes:
+      # Named volume = the data survives "docker compose down"
+      - db_data:/var/lib/mysql
+      # Every file in this folder runs once, in alphabetical order,
+      # the FIRST time the database starts (when db_data is empty)
+      - ./db:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend
+    # The app waits until this check passes before it starts
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No "ports:" on purpose - the database is only reachable inside the network
+
+  app:
+    build: ./app
+    restart: unless-stopped
+    environment:
+      DB_HOST: db            # the service name works as a hostname inside the network
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_APP_USER}          # the app uses the LIMITED account, never admin
+      DB_PASSWORD: ${DB_APP_PASSWORD}
+      SECRET_KEY: ${SECRET_KEY}
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    # Dev only: mount the code and use Flask's auto-reload, so changes show
+    # up without rebuilding. In production we drop these two and the
+    # Dockerfile's gunicorn command is used instead.
+    volumes:
+      - ./app:/app
+    command: flask --app app run --host=0.0.0.0 --port=5000 --debug
+
+volumes:
+  db_data:
+
+networks:
+  backend:

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Warehouses</h2>
+  <table>
+    <tr><th>Site</th><th>Country</th><th>Warehouse</th><th>Capacity (K units)</th></tr>
+    {% for w in warehouses %}
+      <tr>
+        <td>{{ w.site }}</td>
+        <td>{{ w.country }}</td>
+        <td>{{ w.number }}</td>
+        <td>{{ w.capacity_k }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}
