@@ -5,14 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Toxic Chemical Compliance{% endblock %}</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+    nav { display: flex; gap: 1rem; align-items: center; padding-bottom: .8rem; border-bottom: 1px solid #ddd; margin-bottom: 1rem; }
+    nav .user { margin-left: auto; color: #555; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #ccc; padding: .4rem .6rem; text-align: left; }
     th { background: #1f3a5f; color: #fff; }
+    .flash { padding: .6rem .8rem; margin-bottom: .6rem; border-radius: 4px; }
+    .flash.error { background: #fde2e2; border: 1px solid #e08585; }
+    .flash.ok { background: #e2f5e5; border: 1px solid #7cbf89; }
+    form.stack { display: grid; gap: .7rem; max-width: 360px; }
+    form.stack label { display: grid; gap: .2rem; }
+    input, select, button { font: inherit; padding: .35rem .5rem; }
+    button { cursor: pointer; }
+    .open { font-weight: 600; }
   </style>
 </head>
 <body>
   <h1>Toxic Chemical Compliance</h1>
+  {% if session.user_id %}
+  <nav>
+    <a href="{{ url_for('index') }}">Overview</a>
+    <a href="{{ url_for('jobs') }}">Jobs</a>
+    {% if session.role == 'gate' %}<a href="{{ url_for('new_job') }}">New job</a>{% endif %}
+    <span class="user">{{ session.username }} ({{ session.role }})</span>
+    <a href="{{ url_for('logout') }}">Log out</a>
+  </nav>
+  {% endif %}
+
+  {# Jinja escapes everything inside {{ }}, so user input can't inject HTML/JS (XSS) #}
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    <div class="flash {{ category }}">{{ message }}</div>
+  {% endfor %}
+
   {% block content %}{% endblock %}
 </body>
 </html>
