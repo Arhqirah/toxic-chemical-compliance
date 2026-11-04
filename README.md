@@ -42,6 +42,24 @@ docker-compose.yml   Development environment
 .env.example         Settings template (copy to .env)
 ```
 
+## Using the app
+
+| Role | Example login | Can do |
+|---|---|---|
+| gate | `anna.gate` | Raise a job from a driver's ticket (delivery or dispatch) |
+| warehouse | `hans.warehouse` | Confirm a job once the barrels are moved |
+| compliance | `peter.compliance` | View everything |
+
+The storage rules are checked when a job is raised (`app/rules.py`):
+- the warehouse must have room (open deliveries count as already used),
+- class A and B never in the same warehouse,
+- class A never in neighbouring warehouses (assumption: warehouses stand in a row 1-2-3-4-5),
+- a dispatch can't take more than is in stock (minus open dispatches).
+
+Raising and confirming a job each run in **one database transaction**: the job, the stock change and the audit entry are saved together or not at all. The warehouse rows are locked with `SELECT ... FOR UPDATE`, so two lorries can't be given the same free space.
+
+When a job is confirmed and the site holds more than 15K of class A, the app warns that the fire brigade must be informed.
+
 ## Database accounts
 
 | Account | Rights | Used by |
