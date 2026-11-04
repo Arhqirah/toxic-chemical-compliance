@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>New job from driver's ticket</h2>
+  <form method="post" class="stack">
+    <label>Type
+      <select name="type" required>
+        <option value="IN" {{ 'selected' if form.type == 'IN' }}>Delivery (barrels coming in)</option>
+        <option value="OUT" {{ 'selected' if form.type == 'OUT' }}>Dispatch (barrels going out)</option>
+      </select>
+    </label>
+    <label>Ticket number <input name="ticket_ref" value="{{ form.ticket_ref or '' }}" required></label>
+    <label>Site
+      <select name="site_id" required>
+        {% for s in sites %}
+          <option value="{{ s.id }}" {{ 'selected' if form.site_id == s.id|string }}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Warehouse
+      <select name="warehouse" required>
+        {% for n in range(1, 6) %}
+          <option value="{{ n }}" {{ 'selected' if form.warehouse == n|string }}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Chemical class
+      <select name="chemical_class" required>
+        {% for c in ['A', 'B', 'C'] %}
+          <option value="{{ c }}" {{ 'selected' if form.chemical_class == c }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Units (K) <input name="units" type="number" step="0.01" min="0.01" value="{{ form.units or '' }}" required></label>
+    <button type="submit">Raise job</button>
+  </form>
+{% endblock %}
