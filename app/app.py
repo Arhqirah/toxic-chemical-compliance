@@ -1,7 +1,6 @@
 """Toxic Chemical Industrie A/S - compliance app.
 
-Phase 1: just proves that the app container can talk to the database
-by listing every site and its warehouses.
+Lists every site and warehouse with how full it is.
 """
 import os
 
@@ -22,9 +21,13 @@ def index():
             # This query has no user input, so it needs none yet.
             cur.execute(
                 """
-                SELECT s.name AS site, s.country, w.number, w.capacity_k
+                SELECT s.name AS site, s.country, w.number, w.capacity_k,
+                       COALESCE(SUM(st.units_k), 0) AS used_k,
+                       GROUP_CONCAT(DISTINCT st.chemical_class) AS classes
                 FROM warehouse w
                 JOIN site s ON s.id = w.site_id
+                LEFT JOIN stock st ON st.warehouse_id = w.id
+                GROUP BY w.id, s.name, s.country, w.number, w.capacity_k
                 ORDER BY s.name, w.number
                 """
             )
