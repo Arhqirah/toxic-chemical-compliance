@@ -8,6 +8,7 @@ Flow from the brief:
 Every step is written to the audit log.
 """
 import os
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 
@@ -97,9 +98,95 @@ def index():
                 """
             )
             warehouses = cur.fetchall()
+
+            # Class A per site, for the fire brigade banner
+            cur.execute(
+                """SELECT s.name, COALESCE(SUM(st.units_k), 0) AS class_a
+                   FROM site s
+                   LEFT JOIN warehouse w ON w.site_id = s.id
+                   LEFT JOIN stock st ON st.warehouse_id = w.id AND st.chemical_class = 'A'
+                   GROUP BY s.id, s.name"""
+            )
+            fire_alerts = [row for row in cur.fetchall() if rules.fire_brigade_alert(row["class_a"])]
     finally:
         conn.close()
-    return render_template("index.html", warehouses=warehouses)
+    return render_template(
+        "index.html", warehouses=warehouses, fire_alerts=fire_alerts, limit=rules.FIRE_BRIGADE_LIMIT_K
+    )
+
+
+# ---------------------------------------------------------------- inventory
+
+@app.route("/inventory")
+@login_required()
+def inventory():
+    # Filters come from the URL, e.g. /inventory?site_id=2&chemical_class=A
+    f = request.args
+    where, params = [], []
+    # Each filter adds a "column = %s" and its value separately, so the
+    # values never become part of the SQL text (no SQL injection).
+    if f.get("site_id", "").isdigit():
+        where.append("s.id = %s")
+        params.append(int(f["site_id"]))
+    if f.get("chemical_class") in ("A", "B", "C"):
+        where.append("st.chemical_class = %s")
+        params.append(f["chemical_class"])
+    for key, condition in (("from", "st.delivered_at >= %s"),            # uses idx_stock_delivered
+                           ("to", "st.delivered_at < %s + INTERVAL 1 DAY")):
+        if f.get(key):
+            try:
+                day = date.fromisoformat(f[key])
+            except ValueError:
+                flash(f"Ignored the '{key}' date: use the format 2026-10-31.", "error")
+                continue
+            where.append(condition)
+            params.append(day)
+
+    sql = """SELECT s.name AS site, w.number AS warehouse, st.chemical_class,
+                    st.units_k, st.delivered_at
+             FROM stock st
+             JOIN warehouse w ON w.id = st.warehouse_id
+             JOIN site s ON s.id = w.site_id"""
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY st.delivered_at DESC"
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            cur.execute("SELECT id, name FROM site ORDER BY name")
+            sites = cur.fetchall()
+    finally:
+        conn.close()
+    total = sum(r["units_k"] for r in rows)
+    return render_template("inventory.html", rows=rows, sites=sites, f=f, total=total)
+
+
+# ---------------------------------------------------------------- audit log
+
+@app.route("/audit")
+@login_required("compliance")
+def audit_log():
+    # Read-only view for the compliance team and external inspections.
+    # The app account can't UPDATE or DELETE this table (see db/03_app_user.sh).
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT a.created_at, a.action, a.job_id, u.username, s.name AS site
+                   FROM audit_log a
+                   LEFT JOIN users u ON u.id = a.user_id
+                   LEFT JOIN job j ON j.id = a.job_id
+                   LEFT JOIN site s ON s.id = j.site_id
+                   ORDER BY a.created_at DESC, a.id DESC
+                   LIMIT 200"""
+            )
+            entries = cur.fetchall()
+    finally:
+        conn.close()
+    return render_template("audit.html", entries=entries)
 
 
 # ---------------------------------------------------------------- jobs
