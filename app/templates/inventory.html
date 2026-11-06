@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Inventory</h2>
+  <form method="get" style="display:flex; gap:.6rem; flex-wrap:wrap; align-items:end; margin-bottom:1rem">
+    <label>Site<br>
+      <select name="site_id">
+        <option value="">All</option>
+        {% for s in sites %}
+          <option value="{{ s.id }}" {{ 'selected' if f.site_id == s.id|string }}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Class<br>
+      <select name="chemical_class">
+        <option value="">All</option>
+        {% for c in ['A', 'B', 'C'] %}
+          <option value="{{ c }}" {{ 'selected' if f.chemical_class == c }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Delivered from<br><input type="date" name="from" value="{{ f.get('from', '') }}"></label>
+    <label>to<br><input type="date" name="to" value="{{ f.get('to', '') }}"></label>
+    <button type="submit">Filter</button>
+    <a href="{{ url_for('inventory') }}">Clear</a>
+  </form>
+
+  <p>{{ rows|length }} rows, {{ total }}K units in total.</p>
+  <table>
+    <tr><th>Site</th><th>Warehouse</th><th>Class</th><th>Units (K)</th><th>Delivered</th></tr>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.site }}</td>
+        <td>{{ r.warehouse }}</td>
+        <td>{{ r.chemical_class }}</td>
+        <td>{{ r.units_k }}</td>
+        <td>{{ r.delivered_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">Nothing matches those filters.</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}
