@@ -33,7 +33,10 @@ services:
     # No "ports:" on purpose - the database is only reachable inside the network
 
   app:
-    build: ./app
+    build:
+      context: ./app
+      args:
+        DEV: "true"   # also install pytest and ruff (see app/Dockerfile)
     restart: unless-stopped
     environment:
       DB_HOST: db            # the service name works as a hostname inside the network
