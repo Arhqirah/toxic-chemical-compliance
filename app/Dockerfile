@@ -4,8 +4,13 @@ WORKDIR /app
 
 # Install dependencies first, so Docker can cache this layer
 # and skip it when only the code changes
-COPY requirements.txt .
+COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Test and lint tools only in the development image.
+# docker-compose.yml sets DEV=true; a production build leaves it false.
+ARG DEV=false
+RUN if [ "$DEV" = "true" ]; then pip install --no-cache-dir -r requirements-dev.txt; fi
 
 COPY . .
 

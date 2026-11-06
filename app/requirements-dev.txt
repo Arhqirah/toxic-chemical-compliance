@@ -1,0 +1,4 @@
+# Only for development and CI - not installed in the production image
+-r requirements.txt
+pytest==9.1.1
+ruff==0.16.9
