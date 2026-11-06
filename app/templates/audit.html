@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Audit log</h2>
+  <p>Every job raised and confirmed, newest first (last 200 entries). Entries can't be changed or deleted.</p>
+  <table>
+    <tr><th>Time</th><th>User</th><th>Site</th><th>Job</th><th>Action</th></tr>
+    {% for e in entries %}
+      <tr>
+        <td>{{ e.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ e.username or '-' }}</td>
+        <td>{{ e.site or '-' }}</td>
+        <td>{{ e.job_id or '-' }}</td>
+        <td>{{ e.action }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}

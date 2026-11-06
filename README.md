@@ -48,7 +48,9 @@ docker-compose.yml   Development environment
 |---|---|---|
 | gate | `anna.gate` | Raise a job from a driver's ticket (delivery or dispatch) |
 | warehouse | `hans.warehouse` | Confirm a job once the barrels are moved |
-| compliance | `peter.compliance` | View everything |
+| compliance | `peter.compliance` | View everything, including the audit log |
+
+Everyone logged in can see the overview and the **inventory** (filter by site, class and delivery date; test data is from September 2026). The overview shows a red banner for every site with more than 15K of class A.
 
 The storage rules are checked when a job is raised (`app/rules.py`):
 - the warehouse must have room (open deliveries count as already used),

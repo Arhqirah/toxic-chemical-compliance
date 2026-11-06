@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
+  {% for a in fire_alerts %}
+    <div class="flash error">
+      <strong>Fire brigade must be informed:</strong> {{ a.name }} holds {{ a.class_a }}K units of class A (limit {{ limit }}K).
+    </div>
+  {% endfor %}
   <h2>Warehouses</h2>
   <table>
     <tr><th>Site</th><th>Country</th><th>Warehouse</th><th>Capacity (K units)</th><th>Used (K units)</th><th>Classes</th></tr>
