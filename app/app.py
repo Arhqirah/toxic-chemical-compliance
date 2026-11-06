@@ -342,7 +342,8 @@ def new_job():
             )
             job_id = cur.lastrowid
             direction = "to" if job_type == "IN" else "from"
-            audit(cur, job_id, f"Job raised at gate: {job_type} {units}K class {chemical_class} {direction} warehouse {number}")
+            audit(cur, job_id,
+                  f"Job raised at gate: {job_type} {units}K class {chemical_class} {direction} warehouse {number}")
         conn.commit()
         # ---- transaction ends
     except Exception:
@@ -371,7 +372,8 @@ def confirm_job(job_id):
 
             if job["type"] == "IN":
                 cur.execute(
-                    "INSERT INTO stock (warehouse_id, chemical_class, units_k, delivered_at) VALUES (%s, %s, %s, NOW())",
+                    """INSERT INTO stock (warehouse_id, chemical_class, units_k, delivered_at)
+                       VALUES (%s, %s, %s, NOW())""",
                     (job["warehouse_id"], job["chemical_class"], job["units_k"]),
                 )
                 action = "Shipment checked against ticket and stored - job confirmed"

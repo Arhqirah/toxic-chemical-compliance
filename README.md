@@ -99,6 +99,35 @@ All stock follows the storage rules (capacity, A and B never together, A never i
 
 All test users log in with the dev-only password `Password123!`, for example `anna.gate`, `hans.warehouse` or `peter.compliance`. The database only stores scrypt hashes.
 
+## Tests and linting
+
+| What | File | Needs the database? |
+|---|---|---|
+| Unit tests of the storage rules | `app/tests/test_rules.py` | No |
+| Integration tests: login, jobs, inventory, audit log, security | `app/tests/test_app.py` | Yes, a **fresh** one |
+| Linting (style, bugs, security) with ruff | `app/pyproject.toml` | No |
+
+Run them inside the app container (pytest and ruff are only installed in the dev image):
+
+```bash
+# Lint + unit tests
+docker compose exec app ruff check .
+docker compose exec app python -m pytest
+
+# Integration tests - they change the data, so start from a fresh database
+docker compose down -v
+docker compose up -d --build
+docker compose exec -e RUN_DB_TESTS=1 app python -m pytest -v
+```
+
+### CI
+
+`.github/workflows/ci.yml` runs on every pull request and every push to `main`:
+1. **lint-and-unit-tests**: `ruff check` and the unit tests on plain Python
+2. **integration-tests**: starts the whole system with the same `docker-compose.yml` and runs the integration tests against a fresh MariaDB
+
+Only merge a pull request when both are green.
+
 ## Branching
 
 GitHub Flow: `main` is always working. New work goes on a feature branch and is merged to `main` with a pull request.

@@ -1,0 +1,54 @@
+# Runs on every pull request and every push to main.
+# A pull request should only be merged when both jobs are green.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  # Fast checks: no database needed
+  lint-and-unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint with ruff
+        run: ruff check .
+
+      - name: Unit tests (rules)
+        run: python -m pytest tests/test_rules.py -v
+
+  # The whole system, started with the same docker-compose.yml we use for development
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env from the example
+        run: cp .env.example .env
+
+      - name: Start app and database
+        run: docker compose up -d --build --wait
+
+      - name: Integration tests against MariaDB
+        run: docker compose exec -T -e RUN_DB_TESTS=1 app python -m pytest -v -p no:cacheprovider
+
+      - name: Show logs if something failed
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop everything
+        if: always()
+        run: docker compose down -v
