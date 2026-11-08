@@ -128,6 +128,38 @@ docker compose exec -e RUN_DB_TESTS=1 app python -m pytest -v
 
 Only merge a pull request when both are green.
 
+## Production deployment
+
+Live at **http://178.105.183.92**: a Hetzner Cloud VPS (CPX02: 1 vCPU, 1 GB RAM + 1 GB swap, Ubuntu 24.04, Nuremberg).
+
+| Layer | Setup |
+|---|---|
+| Firewall (Hetzner) | Only TCP 22 (SSH), TCP 80 (HTTP) and ICMP open |
+| Login | SSH key only, no passwords |
+| Runs as | User `deploy` (member of the `docker` group), not root |
+| Secrets | `.env` on the server with random passwords (`openssl rand -hex 24`), `chmod 600`, never in git |
+| App | `docker-compose.prod.yml`: gunicorn instead of Flask's debug server, no code mount, no test tools, port 80 |
+| Database | Not published to the internet; only reachable from the `app` container |
+
+### First-time setup (as root)
+
+```bash
+apt update && apt upgrade -y
+fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+curl -fsSL https://get.docker.com | sh
+adduser --disabled-password --gecos "" deploy && usermod -aG docker deploy
+# copy root's authorized_keys to /home/deploy/.ssh/
+```
+
+### Deploy / update (as deploy)
+
+```bash
+cd ~/toxic-chemical-compliance
+git pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
 ## Branching
 
 GitHub Flow: `main` is always working. New work goes on a feature branch and is merged to `main` with a pull request.

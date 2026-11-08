@@ -1,0 +1,18 @@
+# Production overrides, used ON THE SERVER together with docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Differences from development:
+# - no test tools in the image (DEV=false)
+# - no code mounted from the host and no Flask debug server: the Dockerfile's
+#   gunicorn command runs instead
+# - the app answers on port 80 (normal web traffic) instead of 5000
+
+services:
+  app:
+    build:
+      args:
+        DEV: "false"
+    volumes: !reset []
+    command: !reset null
+    ports: !override
+      - "80:5000"
