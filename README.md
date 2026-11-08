@@ -160,6 +160,38 @@ git pull
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
+## Backups (audit data)
+
+The brief requires the audit data to survive a disaster at a depot. Two layers handle that:
+
+1. **The database isn't at any depot.** It runs on a cloud server in a Hetzner data centre, so an accident at a depot can't destroy it.
+2. **Nightly backups** with `scripts/backup.sh`: a full `mariadb-dump` (all tables, including `audit_log`) into `~/backups` on the server, compressed, keeping the last 7 days. `--single-transaction` gives a consistent snapshot without stopping the app. An incomplete dump is discarded instead of kept.
+
+To survive the loss of the server itself, the backups also need a copy somewhere else. Options: Hetzner's server Backups (+20 % of the server price), or download them with `scp`:
+
+```powershell
+scp -i $env:USERPROFILE\.ssh\toxic_chemical "deploy@178.105.183.92:backups/*.sql.gz" .
+```
+
+### Install on the server (as deploy)
+
+```bash
+cd ~/toxic-chemical-compliance && git pull
+./scripts/backup.sh          # run once by hand to test
+crontab -e                   # add the line below: every night at 02:30
+```
+
+```
+30 2 * * * /home/deploy/toxic-chemical-compliance/scripts/backup.sh >> /home/deploy/backups/backup.log 2>&1
+```
+
+### Restore
+
+```bash
+gunzip -c ~/backups/toxic_chemical_YYYY-MM-DD_HHMM.sql.gz \
+  | docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"'
+```
+
 ## Branching
 
 GitHub Flow: `main` is always working. New work goes on a feature branch and is merged to `main` with a pull request.
