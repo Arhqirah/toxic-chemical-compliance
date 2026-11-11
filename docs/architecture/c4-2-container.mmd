@@ -1,0 +1,24 @@
+%% C4 level 2: Containers
+flowchart TB
+    staff["<b>Staff</b><br/><i>[Person]</i><br/>Gate, warehouse and compliance roles"]
+
+    subgraph vps["Hetzner Cloud VPS (Ubuntu 24.04) · firewall: only 22 and 80 open"]
+        subgraph compose["Docker Compose · network: backend"]
+            app["<b>Web application</b><br/><i>[Container: Python 3.12, Flask, gunicorn]</i><br/>Login, roles, raising and confirming jobs, storage rules, inventory, audit log pages"]
+            db[("<b>Database</b><br/><i>[Container: MariaDB 11.4]</i><br/>Sites, warehouses, stock, jobs, users, audit_log Volume: db_data")]
+        end
+        backup["<b>Nightly backup</b><br/><i>[cron + scripts/backup.sh]</i><br/>mariadb-dump at 02:30, keeps 7 days in ~/backups"]
+    end
+
+    staff -- "Uses<br/>[HTTP, port 80]" --> app
+    app -- "Reads and writes as tc_app<br/>(audit_log: INSERT + SELECT only)<br/>[SQL over TCP 3306, inside the network]" --> db
+    backup -- "Dumps the whole database<br/>[docker compose exec]" --> db
+
+    classDef person fill:#08427b,stroke:#052e56,color:#fff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#fff
+    classDef support fill:#85bbf0,stroke:#5d82a8,color:#000
+    class staff person
+    class app,db container
+    class backup support
+    style vps fill:#ffffff,stroke:#444,stroke-dasharray: 6 4
+    style compose fill:#f4f8fc,stroke:#438dd5
