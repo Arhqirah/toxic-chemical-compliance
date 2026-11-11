@@ -1,0 +1,31 @@
+%% C4 level 3: Components of the web application
+flowchart TB
+    staff["<b>Staff</b><br/><i>[Person]</i>"]
+
+    subgraph appb["Web application · Flask (pages rendered with Jinja templates, auto-escaped)"]
+        auth["<b>Login and roles</b><br/><i>[app.py: login, logout, login_required]</i><br/>Checks scrypt hashes, keeps the session, refuses pages the role may not use"]
+        jobs["<b>Jobs</b><br/><i>[app.py: new_job, confirm_job]</i><br/>Raises and confirms jobs, each in one transaction with SELECT … FOR UPDATE"]
+        views["<b>Read pages</b><br/><i>[app.py: index, inventory, audit_log]</i><br/>Overview with fire warning, filtered inventory, audit log"]
+        dbmod["<b>Database access</b><br/><i>[db.py: get_connection]</i><br/>PyMySQL, settings from environment, autocommit off"]
+        rules["<b>Storage rules</b><br/><i>[rules.py]</i><br/>Capacity, A/B apart, no A next to A, dispatch stock, 15K fire limit"]
+    end
+
+    db[("<b>Database</b><br/><i>[MariaDB 11.4]</i>")]
+
+    staff -- "[HTTP]" --> auth
+    staff -- "[HTTP]" --> jobs
+    staff -- "[HTTP]" --> views
+    auth --> dbmod
+    jobs --> dbmod
+    jobs -- "checks every job" --> rules
+    views -- "fire limit" --> rules
+    views --> dbmod
+    dbmod -- "[SQL, %s parameters]" --> db
+
+    classDef person fill:#08427b,stroke:#052e56,color:#fff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000
+    classDef container fill:#438dd5,stroke:#2e6295,color:#fff
+    class staff person
+    class auth,jobs,views,rules,dbmod component
+    class db container
+    style appb fill:#ffffff,stroke:#438dd5,stroke-dasharray: 6 4
