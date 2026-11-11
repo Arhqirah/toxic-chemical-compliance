@@ -1,0 +1,23 @@
+%% C4 level 1: System context
+flowchart TB
+    gate["<b>Gate staff</b><br/><i>[Person]</i><br/>Register deliveries and dispatches from drivers' tickets"]
+    wh["<b>Warehouse staff</b><br/><i>[Person]</i><br/>Check shipments, move barrels and confirm jobs"]
+    comp["<b>Compliance team</b><br/><i>[Person]</i><br/>Watch the storage rules, read the inventory and audit log"]
+
+    sys["<b>Toxic Chemical Compliance</b><br/><i>[Software system]</i><br/>Records every delivery, dispatch and stored barrel, enforces the storage rules and keeps an append-only audit log"]
+
+    insp["<b>External inspector</b><br/><i>[Person, external]</i><br/>Checks that storage follows the regulations"]
+    fire["<b>Local fire brigade</b><br/><i>[External organisation]</i><br/>Must be told when a site holds more than 15K units of class A"]
+
+    gate -- "Raises jobs<br/>[HTTP]" --> sys
+    wh -- "Confirms jobs<br/>[HTTP]" --> sys
+    comp -- "Reads inventory, audit log<br/>and fire brigade warnings<br/>[HTTP]" --> sys
+    comp -. "Hands over audit records" .-> insp
+    comp -. "Informs when warned<br/>(manual, outside the system)" .-> fire
+
+    classDef person fill:#08427b,stroke:#052e56,color:#fff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef external fill:#999999,stroke:#6b6b6b,color:#fff
+    class gate,wh,comp person
+    class sys system
+    class insp,fire external
