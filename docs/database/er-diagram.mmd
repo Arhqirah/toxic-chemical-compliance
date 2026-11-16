@@ -1,0 +1,51 @@
+%% ER diagram of the MariaDB database (db/01_schema.sql)
+erDiagram
+    site ||--|{ warehouse : "has 5"
+    warehouse ||--o{ stock : "holds"
+    site ||--o{ job : "raised for"
+    warehouse ||--o{ job : "delivered to / dispatched from"
+    job |o--o{ audit_log : "logged in"
+    users |o--o{ audit_log : "performed"
+
+    site {
+        INT id PK
+        VARCHAR name
+        VARCHAR country "ISO code, e.g. DK"
+    }
+    warehouse {
+        INT id PK
+        INT site_id FK
+        TINYINT number "1-5, UNIQUE with site_id"
+        DECIMAL capacity_k "> 0"
+    }
+    stock {
+        INT id PK
+        INT warehouse_id FK
+        ENUM chemical_class "A, B or C (indexed)"
+        DECIMAL units_k ">= 0"
+        DATETIME delivered_at "indexed"
+    }
+    job {
+        INT id PK
+        INT site_id FK
+        INT warehouse_id FK
+        ENUM type "IN or OUT"
+        ENUM chemical_class "A, B or C"
+        DECIMAL units_k "> 0"
+        VARCHAR ticket_ref "driver's ticket"
+        ENUM status "open or confirmed"
+        DATETIME created_at "indexed"
+    }
+    users {
+        INT id PK
+        VARCHAR username UK
+        VARCHAR password_hash "scrypt"
+        ENUM role "gate, warehouse, compliance"
+    }
+    audit_log {
+        INT id PK
+        INT job_id FK
+        INT user_id FK
+        VARCHAR action
+        DATETIME created_at
+    }
