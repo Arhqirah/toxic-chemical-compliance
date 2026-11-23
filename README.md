@@ -1,6 +1,6 @@
 # Toxic Chemical Compliance
 
-Prototype of a compliance app for Toxic Chemical Industrie A/S: safe storage of class A, B and C chemicals across EU depots. Exam project for **Development Environments** and **Databases 2** at EK.
+Prototype of a compliance app for Toxic Chemical Industrie A/S: safe storage of class A, B and C chemicals across EU depots.
 
 ## Stack
 
