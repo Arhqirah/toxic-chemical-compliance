@@ -1,0 +1,15 @@
+# Caddy sits in front of the Flask app in production and handles HTTPS.
+# It gets a free certificate from Let's Encrypt for SITE_ADDRESS by itself
+# and renews it before it runs out. The address comes from
+# docker-compose.prod.yml.
+
+{$SITE_ADDRESS} {
+	# Everything goes on to gunicorn in the app container (same Docker network)
+	reverse_proxy app:5000
+}
+
+# Plain http, also when someone types the bare IP address:
+# send them to the https address instead.
+http:// {
+	redir https://{$SITE_ADDRESS}{uri} permanent
+}

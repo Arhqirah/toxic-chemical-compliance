@@ -130,15 +130,16 @@ Only merge a pull request when both are green.
 
 ## Production deployment
 
-Live at **http://178.105.183.92**: a Hetzner Cloud VPS (CPX02: 1 vCPU, 1 GB RAM + 1 GB swap, Ubuntu 24.04, Nuremberg).
+Live at **https://178-105-183-92.sslip.io** (http://178.105.183.92 redirects there): a Hetzner Cloud VPS (CPX02: 1 vCPU, 1 GB RAM + 1 GB swap, Ubuntu 24.04, Nuremberg).
 
 | Layer | Setup |
 |---|---|
-| Firewall (Hetzner) | Only TCP 22 (SSH), TCP 80 (HTTP) and ICMP open |
+| Firewall (Hetzner) | Only TCP 22 (SSH), TCP 80 (HTTP, redirects to HTTPS), TCP 443 (HTTPS) and ICMP open |
 | Login | SSH key only, no passwords |
 | Runs as | User `deploy` (member of the `docker` group), not root |
 | Secrets | `.env` on the server with random passwords (`openssl rand -hex 24`), `chmod 600`, never in git |
-| App | `docker-compose.prod.yml`: gunicorn instead of Flask's debug server, no code mount, no test tools, port 80 |
+| App | `docker-compose.prod.yml`: gunicorn instead of Flask's debug server, no code mount, no test tools, not published to the internet itself |
+| HTTPS | Caddy (`caddy/Caddyfile`) in front of the app gets and renews a free Let's Encrypt certificate for `178-105-183-92.sslip.io`. sslip.io is a free name that always points to the IP written in it. The session cookie is only sent over HTTPS |
 | Database | Not published to the internet; only reachable from the `app` container |
 
 ### First-time setup (as root)

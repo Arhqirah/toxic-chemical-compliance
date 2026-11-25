@@ -25,6 +25,9 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only")
 # and isn't sent along with forms posted from other sites (SameSite=Lax),
 # which blocks most cross-site request forgery.
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# In production the site runs on HTTPS (see docker-compose.prod.yml), and the
+# session cookie is then never sent over plain http.
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE") == "true"
 # CSRF tokens: every form gets a hidden random token tied to the session,
 # and any POST without the right token is rejected with 400 Bad Request.
 # This stops other websites from submitting forms as a logged-in user.
