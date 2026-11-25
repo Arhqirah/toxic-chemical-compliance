@@ -5,7 +5,8 @@
 # - no test tools in the image (DEV=false)
 # - no code mounted from the host and no Flask debug server: the Dockerfile's
 #   gunicorn command runs instead
-# - the app answers on port 80 (normal web traffic) instead of 5000
+# - the app is no longer published to the internet itself. Caddy takes
+#   ports 80 and 443, handles HTTPS and passes requests on to the app.
 
 services:
   app:
@@ -14,5 +15,30 @@ services:
         DEV: "false"
     volumes: !reset []
     command: !reset null
-    ports: !override
-      - "80:5000"
+    ports: !reset []
+    environment:
+      # The session cookie is only sent over HTTPS
+      SESSION_COOKIE_SECURE: "true"
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports:
+      - "80:80"     # needed for the certificate check and the redirect to https
+      - "443:443"
+    environment:
+      # sslip.io is a free name that always points to the IP written in it,
+      # so it needs no DNS setup. Swap it for a real domain if you buy one.
+      SITE_ADDRESS: 178-105-183-92.sslip.io
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # the certificate, so it survives a restart
+      - caddy_config:/config
+    networks:
+      - backend
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:
