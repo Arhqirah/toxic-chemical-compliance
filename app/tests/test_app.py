@@ -42,15 +42,31 @@ def query(sql, args=()):
         conn.close()
 
 
+def csrf_token(client):
+    """The hidden CSRF token from a form, like a browser would send it back.
+
+    The token belongs to the session, so the one on the login page works for
+    every form in the same session.
+    """
+    html = client.get("/login").text
+    return re.search(r'name="csrf_token" value="([^"]+)"', html).group(1)
+
+
 def login(client, username, password=PASSWORD):
     client.get("/logout")
-    return client.post("/login", data={"username": username, "password": password}, follow_redirects=True)
+    data = {"username": username, "password": password, "csrf_token": csrf_token(client)}
+    return client.post("/login", data=data, follow_redirects=True)
+
+
+def confirm(client, job_id, **kwargs):
+    return client.post(f"/jobs/{job_id}/confirm", data={"csrf_token": csrf_token(client)}, **kwargs)
 
 
 def raise_job(client, **fields):
     data = {"type": "IN", "ticket_ref": "T-TEST", "site_id": "1", "warehouse": "1",
             "chemical_class": "C", "units": "1"}
     data.update({k: str(v) for k, v in fields.items()})
+    data["csrf_token"] = csrf_token(client)
     return client.post("/jobs/new", data=data, follow_redirects=True)
 
 
@@ -138,7 +154,7 @@ def test_raising_a_job_writes_the_audit_log(client):
 
 def test_gate_cannot_confirm_jobs(client):
     job_id = query("SELECT id FROM job WHERE ticket_ref = 'T-OUT-OK'")[0]["id"]
-    r = client.post(f"/jobs/{job_id}/confirm", follow_redirects=True)
+    r = confirm(client, job_id, follow_redirects=True)
     assert "have access to that page" in r.text
 
 
@@ -153,13 +169,13 @@ def test_warehouse_cannot_raise_jobs(client):
 def test_confirming_delivery_adds_stock(client):
     job_id = query("SELECT id FROM job WHERE ticket_ref = 'T-IN-OK'")[0]["id"]
     before = query("SELECT COUNT(*) AS n FROM stock")[0]["n"]
-    client.post(f"/jobs/{job_id}/confirm")
+    confirm(client, job_id)
     assert query("SELECT COUNT(*) AS n FROM stock")[0]["n"] == before + 1
 
 
 def test_job_cannot_be_confirmed_twice(client):
     job_id = query("SELECT id FROM job WHERE ticket_ref = 'T-IN-OK'")[0]["id"]
-    r = client.post(f"/jobs/{job_id}/confirm", follow_redirects=True)
+    r = confirm(client, job_id, follow_redirects=True)
     assert "is already confirmed" in r.text
 
 
@@ -167,7 +183,7 @@ def test_confirming_dispatch_removes_exactly_the_ordered_amount(client):
     job = query("SELECT id, warehouse_id FROM job WHERE ticket_ref = 'T-OUT-OK'")[0]
     sql = "SELECT SUM(units_k) AS s FROM stock WHERE warehouse_id = %s AND chemical_class = 'B'"
     before = query(sql, (job["warehouse_id"],))[0]["s"]
-    client.post(f"/jobs/{job['id']}/confirm")
+    confirm(client, job['id'])
     after = query(sql, (job["warehouse_id"],))[0]["s"]
     assert before - after == 2
     assert query("SELECT status FROM job WHERE id = %s", (job["id"],))[0]["status"] == "confirmed"
@@ -178,7 +194,7 @@ def test_fire_brigade_warning_when_confirming_at_hamburg(client):
     raise_job(client, site_id=2, warehouse=2, chemical_class="C", units=1, ticket_ref="T-HAMBURG")
     job_id = query("SELECT id FROM job WHERE ticket_ref = 'T-HAMBURG'")[0]["id"]
     login(client, "hans.warehouse")
-    r = client.post(f"/jobs/{job_id}/confirm", follow_redirects=True)
+    r = confirm(client, job_id, follow_redirects=True)
     assert "fire brigade must be informed" in r.text
 
 
@@ -225,3 +241,21 @@ def test_only_compliance_sees_audit_log(client):
     login(client, "peter.compliance")
     r = client.get("/audit")
     assert table_rows(r.text) >= 63
+
+
+# ---------------------------------------------------------------- CSRF
+
+def test_login_without_csrf_token_is_rejected(client):
+    client.get("/logout")
+    r = client.post("/login", data={"username": "anna.gate", "password": PASSWORD})
+    assert r.status_code == 400
+    # Still logged out: the overview sends us to the login page
+    assert client.get("/").status_code == 302
+
+
+def test_confirm_without_csrf_token_is_rejected(client):
+    job_id = query("SELECT id FROM job WHERE status = 'open' ORDER BY id LIMIT 1")[0]["id"]
+    login(client, "hans.warehouse")
+    r = client.post(f"/jobs/{job_id}/confirm")
+    assert r.status_code == 400
+    assert query("SELECT status FROM job WHERE id = %s", (job_id,))[0]["status"] == "open"

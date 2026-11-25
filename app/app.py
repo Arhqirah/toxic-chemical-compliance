@@ -13,6 +13,7 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 
 from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import check_password_hash
 
 import rules
@@ -24,6 +25,10 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only")
 # and isn't sent along with forms posted from other sites (SameSite=Lax),
 # which blocks most cross-site request forgery.
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# CSRF tokens: every form gets a hidden random token tied to the session,
+# and any POST without the right token is rejected with 400 Bad Request.
+# This stops other websites from submitting forms as a logged-in user.
+csrf = CSRFProtect(app)
 
 
 # ---------------------------------------------------------------- login

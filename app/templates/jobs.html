@@ -17,6 +17,7 @@
         <td>
           {% if j.status == 'open' and session.role == 'warehouse' %}
             <form method="post" action="{{ url_for('confirm_job', job_id=j.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Confirm</button>
             </form>
           {% else %}

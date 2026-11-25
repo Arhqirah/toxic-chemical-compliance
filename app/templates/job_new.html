@@ -2,6 +2,7 @@
 {% block content %}
   <h2>New job from driver's ticket</h2>
   <form method="post" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Type
       <select name="type" required>
         <option value="IN" {{ 'selected' if form.type == 'IN' }}>Delivery (barrels coming in)</option>

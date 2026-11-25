@@ -2,6 +2,7 @@
 {% block content %}
   <h2>Log in</h2>
   <form method="post" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Username <input name="username" required autofocus></label>
     <label>Password <input name="password" type="password" required></label>
     <button type="submit">Log in</button>
